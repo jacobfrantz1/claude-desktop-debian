@@ -80,7 +80,7 @@ MAINTAINER="Claude Desktop Linux Maintainers"
 DESCRIPTION="Claude Desktop for Linux"
 PROJECT_ROOT="$(pwd)" WORK_DIR="$PROJECT_ROOT/build" APP_STAGING_DIR="$WORK_DIR/electron-app" VERSION="" 
 echo -e "\033[1;36m--- Argument Parsing ---\033[0m"
-BUILD_FORMAT="deb"    CLEANUP_ACTION="yes"  TEST_FLAGS_MODE=false
+BUILD_FORMAT="deb"    CLEANUP_ACTION="yes"  TEST_FLAGS_MODE=false  ENABLE_DEBUG_LOGGING=false
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -98,10 +98,15 @@ while [[ $# -gt 0 ]]; do
         TEST_FLAGS_MODE=true
         shift # past argument
         ;;
+        -d|--debug)
+        ENABLE_DEBUG_LOGGING=true
+        shift # past argument
+        ;;
         -h|--help)
-        echo "Usage: $0 [--build deb|appimage] [--clean yes|no] [--test-flags]"
+        echo "Usage: $0 [--build deb|appimage] [--clean yes|no] [--debug] [--test-flags]"
         echo "  --build: Specify the build format (deb or appimage). Default: deb"
         echo "  --clean: Specify whether to clean intermediate build files (yes or no). Default: yes"
+        echo "  --debug: Enable debug logging level in the built application. Default: off"
         echo "  --test-flags: Parse flags, print results, and exit without building."
         exit 0
         ;;
@@ -614,6 +619,14 @@ fi
 
 echo "✓ Tray menu handler patched: function=${TRAY_FUNC}, tray_var=${TRAY_VAR}, check_var=${FIRST_CONST}"
 echo "##############################################################"
+
+# Enable debug logging (only if --debug flag was passed)
+if [ "$ENABLE_DEBUG_LOGGING" = true ]; then
+    if ! grep -q 'app.isPackaged?"debug":"debug"' app.asar.contents/.vite/build/index.js; then
+        sed -i 's/app.isPackaged?"info":"debug"/app.isPackaged?"debug":"debug"/' app.asar.contents/.vite/build/index.js
+    fi
+    echo "✓ Debug logging enabled"
+fi
 
 # Fix quick window submit issue by adding blur() call before hide()
 if ! grep -q 'e.blur(),e.hide()' app.asar.contents/.vite/build/index.js; then
